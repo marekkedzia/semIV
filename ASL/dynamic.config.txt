@@ -1,0 +1,62 @@
+Konfiguracja:
+- Sieć 1:
+	- Maszyna 1 - 10.1.2.11/24
+	- Maszyna 2 - 10.1.2.12/24
+- Sieć 2:
+	- Maszyna 2 - 10.2.3.12/24
+	- Maszyna 3 - 10.2.3.13/24
+
+1) Upewnij się, że wszystkie trzy maszyny w ustawieniach Virtual Box w zakładce "Sieć" posiadają włączone karty 2 i 3. Każda z tych kart powinna być podłączona do sieci wewnętrznej o tej samej nazwie (domyślnie "intnet"). Nie zmieniaj konfiguracji Karty 1.
+
+2) Na dowolmej maszynie zaloguj się jako root i w dowolnym edytorze tekstowym otwórz plik "/etc/network/interfaces"
+	2a) Zakomentuj lub usuń linijke "auto lo"
+
+	2b) Odpowiednio skonfiguruj interfejs do korzystania z dhcp. W tym 	przypadku skorzystamy z portu 8.
+		auto lo enp0s8
+		iface enp0s8 inet static
+		address 10.1.2.11/24
+
+	2c) Zapisz i zamknij plik
+
+	2d) Zrestartuj usługę sieciową używając komendy:
+		sudo service networking restart
+
+3) Kontynuuj pracę na tej samej maszynie. Zajmiemy się teraz konfiguracją routingu dynamicznego.
+	3a) Musimy zainstalować pakiet FRR, w tym celu użyj poleceń:
+		sudo apt update
+		sudo apt install frr
+
+	3b) Teraz należy uruchomić odpowiednie demony modyfikując plik 		"/etc/frr/daemons". Uruchom plik w dowolnym edytorze a następnie 	upewnij się, że flaga przy demonie ospfd jest ustawiona na 	wartość "yes":
+		ospfd=yes
+
+	3c) Przyszedł czas na konfigurację odpowiedniego portu do 	współpracy z OSPFD. Otwórz plik "/etc/frr/ospfd.conf" (jeśli nie 	istnieje, stwórz go)
+
+	3d) Dodaj następującą konfigurację:
+		interface enp0s8
+		ip address 10.1.2.11/24
+
+		router ospf
+		network 10.1.2.0/24 area 0.0.0.0
+	
+	dla maszyny 2 plik powinien mieć kształt:
+		interface enp0s8
+  		ip address 10.1.2.12/24
+
+		interface enp0s9
+  		ip address 10.1.3.12/24
+
+		router ospf
+ 		network 10.1.2.0/24 area 0
+  		network 10.1.3.0/24 area 0
+
+	3e) Uruchom usługę FRR. W tym celu użyj komend:
+		sudo systemctl restart frr
+		sudo systemctl status frr
+	
+	3f) Możesz sprawdzić czy maszyny widzą się nawzajem (po 	skonfigurowaniu przynajmniej maszyny 2 i jednej z dwóch 	pozostałych). Najpierw użyj komendy:
+		vtysh
+	a później:
+		show ip ospf neighbor
+		
+4) Pamiętaj o włączeniu forwardowania ramek na maszynie 2 komendą:
+	echo 1 > /proc/sys/net/ipv4/ip_forward

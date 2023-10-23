@@ -1,0 +1,54 @@
+Konfiguracja:
+- Sieć 1:
+	- Maszyna 1 - 10.1.2.11/24
+	- Maszyna 2 - 10.1.2.12/24
+
+Upewnij się, że obie maszyny w ustawieniach Virtual Box w zakładce "Sieć" posiadają włączone karty 2 i 3. Każda z tych kart powinna być podłączona do sieci wewnętrznej o tej samej nazwie (domyślnie "intnet"). Nie zmieniaj konfiguracji Karty 1.
+
+A) iptables
+1. Aby rozpocząć należy zainstalować iptables na maszynie na, której chcesz ustawic firewall.
+	a) zaloguj sie na konto root "su -"
+	b) instalacja:
+		sudo apt-get update
+		sudo apt-get install iptables
+2.Aby na maszynie 1 "zablokować" maszynę drugą użyj poniższej komendy:
+	sudo iptables -A INPUT -p icmp --icmp-type echo-request -s 10.1.2.12 -j DROP
+3.Teraz przy pomocy komendy:
+	sudo iptables -L --line-numbers
+	można wylistowac wszystkie ustawione reguly
+4.Spróbuj pingować z maszyny drugiej, pierwszą - nie powinno działać
+5.Aby usunać wszystkie reguly uzyj komendy:
+	sudo iptables -F
+6.Aby usunac pojedyncza regule:
+ 	a) najpierw wylistuj wszystkie przy pomocy komendy:
+		sudo iptables -L --line-numbers
+	b) następnie po odczytaniu numeru danej reguly, usun ja przy uzyciu komendy:
+		sudo iptables -D INPUT <num> (<num> zastąp numerem reguły)
+
+7.Aby zablokowac wszystkie polaczenia wychodzące:
+	sudo iptables -P OUTPUT DROP
+8.Aby akceptowac wszystkie polaczenia wychodzące:
+	sudo iptables -P OUTPUT ACCEPT
+9.Aby zablokowac ruch wychodzący z maszyny pierwszej do drugiej uzyc komendy:
+	sudo iptables -A OUTPUT -d 10.1.2.12 -j DROP
+10.Aby zresetowac iptables uzyj:
+	sudo iptables -F
+	sudo iptables -X
+	sudo iptables -P INPUT ACCEPT
+	sudo iptables -P OUTPUT ACCEPT
+
+Przydatne:
+5 typów reguł:
+• PREROUTING (przy pojawieniu się na interfejsie - dla tablic mangle i filter)
+• INPUT (przed podaniem pakietu do lokalnego procesu - dla tablic mangle i filter)
+• OUTPUT (po utworzeniu pakietu przez proces - dla tablic raw, mangle, nat i filter)
+• FORWARD (dla każdego pakietu przekierowanego przez hosta - dla tablic mangle i filter)
+• POSTROUTING (przy opuszczaniu interfejsu przez pakiet - dla tablic nat i mangle)
+
+3 główne operacje na pakiecie:
+• ACCEPT - przyjęcie pakietu
+• DROP - odrzucenie pakietu (przy połączeniu z systemem wygląda to tak, jakby system nie istniał)
+• REJECT - odrzucenie pakietu (przy połączeniu pojawia się komunikat connection reset dla TCP lub
+destination host unreachable dla UDP lub ICMP)
+
+

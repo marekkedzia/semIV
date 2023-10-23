@@ -1,0 +1,71 @@
+Konfiguracja:
+- Sieć 1:
+	- Maszyna 1 - 10.1.2.1/24
+	- Maszyna 2 - 10.1.2.2/24
+- Sieć 2:
+	- Maszyna 2 - 10.2.3.1/24
+	- Maszyna 3 - 10.2.3.2/24
+
+1) Upewnij się, że wszystkie trzy maszyny w ustawieniach Virtual Box w zakładce "Sieć" posiadają włączone karty 2 i 3. Każda z tych kart powinna być podłączona do sieci wewnętrznej o tej samej nazwie (domyślnie "intnet"). Nie zmieniaj konfiguracji Karty 1.
+
+2) Uruchom maszynę pierwszą, zaloguj się jako root i w dowolnym edytorze tekstu wyświetl pliku "/etc/network/interfaces"
+
+	2a) Zakomentuj lub usuń linijke "auto lo"
+	2b) Dodaj pierwszą konfigurację:
+		iface lo inet loopback
+	odpowiada ona za podstawową konfigurację interfejsu loopback
+	2c) Druga linijka:
+		auto lo enp0s8
+	dzięki niej podczas bootowania system automatycznie podniesie 	interfejs 8
+	2d) Dalej:
+		iface enp0s8 inet static
+		address 10.1.2.1/24
+	konfiguruje interfejs enp0s8 ze statycznym adresem IP
+	2e) Zapisz plik, wróć do terminala i zrestartuj usługę sieciową 	komendą:
+		sudo service networking restart
+
+3) Pozostaw maszynę pierwszą uruchomioną i włącz maszynę drugą. Tak jak poprzednio zaloguj się jako root i w dowolnym edytorze uruchom podgląd pliku "/etc/network/interfaces"
+	3a) Zakomentuj lub linijkę 
+		auto lo
+	3b) Dodaj linie:
+		iface lo inet loopback
+		auto lo enp0s8 enp0s9
+	3c) Skonfiguruj statyczny adres na porcie 8
+		iface enp0s8 inet static
+		address 10.1.2.2/24
+	3d) Skonfiguruj statyczny adres na porcie 9
+		iface enp0s9 inet static
+		address 10.2.3.1/24
+	3e) Zapisz plik, wróć do terminala i zrestartuj usługę sieciową 	komendą:
+		sudo service networking restart
+	
+	3f) Sprawdź zawartość pliku /proc/sys.net/ipv4/ip_forward.
+	Jeśli jest w nim wpisana wartość 0 komputer nie będzie przekazywał 	dalej pakietów ip. Aby to zmienić użyj komendy:
+		echo 1 > /proc/sys/net/ipv4/ip_forward
+
+4) Pozostawiając resztę maszyn uruchomionych włącz maszynę trzecią. Konfiguracja pliku "/etc/network/interfaces" nie różni się od konfiguracji maszyny pierwszej poza innym numerem portu oraz adresem IP.
+	4a) Edytowane linijki w Twoim pliku powinny wyglądać następująco:
+		# auto lo
+		iface lo inet loopback
+		auto lo enp0s3 enp0s9
+		iface enp0s9 inet static
+		address 10.2.3.2/24
+	4b) Pamiętaj o restarcie usługi sieciowej
+
+5) Nadszedł czas na konfigurację routingu. Na maszynie pierwszej użyj komendy:
+	sudo ip route add 10.2.3.0/24 via 10.1.2.2 dev enp0s8
+która dodaje połączenie z siecią 10.2.3.0/24 poprzez adres 10.1.2.2 przez port 8
+
+6) Na maszynie trzeciej użyj podobnej komendy do konfiguracji połączenia z siecią 10.1.2.0/24 poprzez adres 10.2.3.1 na porcie 9
+	sudo ip route add 10.1.2.0/24 via 10.2.3.1 dev enp0s9
+
+7) Teraz możesz użyć komendy:
+	ping 10.2.3.2
+z maszyny pierwszej aby przetestować połączenie z maszyną trzecią.
+Analogicznie, użyj:
+	ping 10.1.2.1
+aby sprawdzić połączenie maszyny trzeciej z maszyną pierwszą.
+	
+
+	
+	
